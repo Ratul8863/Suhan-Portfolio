@@ -52,6 +52,7 @@ export function MotionModeToggle() {
         writeFullMotion(next);
         setEnabled(next);
       }}
+      data-liquid-cursor-hide
       className={cn(
         "group fixed z-[80] hidden items-center border font-ui font-semibold uppercase lg:inline-flex",
         "transition-[background-color,border-color,color,transform] duration-300",

@@ -220,8 +220,12 @@ export const HoverMaskReveal = forwardRef<HoverMaskRevealHandle, HoverMaskReveal
         width={3292}
         height={1854}
         fetchPriority="high"
-        className="pointer-events-none absolute inset-0 block h-full w-full max-w-none"
-        style={{ objectFit: "cover", objectPosition: "center bottom" }}
+        className={cn(
+          "pointer-events-none absolute inset-0 block h-full w-full max-w-none object-cover",
+          // Mobile: bottom-weighted band. Desktop: lock the crown — short
+          // viewports + object-bottom was slicing the head off.
+          "object-bottom lg:object-[center_top]",
+        )}
         draggable={false}
       />
       {interactive ? (

@@ -405,7 +405,9 @@ export function HeroStage() {
           // Sit a bit higher than strict 296/896 so the head closes the
           // gap under the intro on short phones (375×785).
           "top-[22%] h-[78%]",
-          "lg:top-0 lg:h-[calc(100%+28px)]",
+          // Desktop: small top inset + object-top (on the img) so the crown
+          // isn’t flush-clipped by the hero edge on short viewports.
+          "lg:top-12 lg:h-[calc(100%-3rem+28px)]",
         )}
       >
         <HoverMaskReveal

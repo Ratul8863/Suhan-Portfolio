@@ -270,6 +270,7 @@ export function LiquidCarveButton({
     onPointerLeave: disabled ? undefined : onLeave,
     onClick: disabled ? undefined : onClick,
     "aria-label": label,
+    "data-liquid-cursor-hide": true,
     className,
     style: {
       minWidth: 1,

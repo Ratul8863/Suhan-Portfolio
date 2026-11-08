@@ -13,14 +13,31 @@ function canUseLiquidCursor() {
   );
 }
 
+/** Hide liquid + circle over CTAs / native buttons / existing hide zones. */
+function shouldHideLiquid(under: Element | null) {
+  if (!(under instanceof Element)) return false;
+  return Boolean(
+    under.closest(
+      [
+        "button",
+        "[role='button']",
+        "input[type='submit']",
+        "input[type='button']",
+        "label[for]",
+        "[data-project-hit]",
+        "[data-liquid-cursor-hide]",
+      ].join(","),
+    ),
+  );
+}
+
 /**
- * Site-wide Kala liquid cursor + instant "+" crosshair.
- * Hidden over `[data-project-hit]` (Feature Projects → View Project CTA)
- * and `[data-liquid-cursor-hide]` (e.g. All Projects archive).
+ * Site-wide Kala liquid cursor + instant circle (no + crosshair).
+ * Disabled over buttons / CTAs and existing hide markers.
  */
 export function SiteLiquidCursor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const plusRef = useRef<HTMLDivElement>(null);
+  const circleRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -30,8 +47,8 @@ export function SiteLiquidCursor() {
   useEffect(() => {
     if (!ready) return;
     const canvas = canvasRef.current;
-    const plus = plusRef.current;
-    if (!canvas || !plus) return;
+    const circle = circleRef.current;
+    if (!canvas || !circle) return;
 
     const liquid = new ProjectsLiquidCursor(canvas);
     let enabled = false;
@@ -42,8 +59,8 @@ export function SiteLiquidCursor() {
       document.body.style.cursor = hide ? "none" : "";
     };
 
-    const setPlusVisible = (on: boolean) => {
-      plus.style.opacity = on ? "1" : "0";
+    const setCircleVisible = (on: boolean) => {
+      circle.style.opacity = on ? "1" : "0";
     };
 
     const syncEnabled = () => {
@@ -53,29 +70,27 @@ export function SiteLiquidCursor() {
         liquid.start();
         setNativeHidden(true);
         canvas.classList.remove("hidden");
-        plus.classList.remove("hidden");
+        circle.classList.remove("hidden");
       } else {
         liquid.setPointer(0, 0, false);
         liquid.stop();
         setNativeHidden(false);
-        setPlusVisible(false);
+        setCircleVisible(false);
         canvas.classList.add("hidden");
-        plus.classList.add("hidden");
+        circle.classList.add("hidden");
       }
     };
 
     const onPointerMove = (event: PointerEvent) => {
       if (!enabled) return;
       const under = document.elementFromPoint(event.clientX, event.clientY);
-      const overHit = Boolean(
-        under instanceof Element &&
-          (under.closest("[data-project-hit]") ||
-            under.closest("[data-liquid-cursor-hide]")),
-      );
+      const overHit = shouldHideLiquid(under);
 
-      // Instant + — no rAF lag
-      plus.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0) translate(-50%, -50%)`;
-      setPlusVisible(!overHit);
+      // Instant circle — no rAF lag
+      circle.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0) translate(-50%, -50%)`;
+      setCircleVisible(!overHit);
+      // Buttons keep the normal pointer; elsewhere hide the OS cursor.
+      setNativeHidden(!overHit);
 
       liquid.setOverHit(overHit);
       liquid.setPointer(event.clientX, event.clientY, true);
@@ -83,19 +98,22 @@ export function SiteLiquidCursor() {
 
     const onPointerLeave = () => {
       liquid.setPointer(0, 0, false);
-      setPlusVisible(false);
+      setCircleVisible(false);
     };
 
     const onPointerEnter = (event: MouseEvent) => {
       if (!enabled) return;
-      plus.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0) translate(-50%, -50%)`;
-      setPlusVisible(true);
+      circle.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0) translate(-50%, -50%)`;
+      const under = document.elementFromPoint(event.clientX, event.clientY);
+      const overHit = shouldHideLiquid(under);
+      setCircleVisible(!overHit);
+      liquid.setOverHit(overHit);
       liquid.setPointer(event.clientX, event.clientY, true);
     };
 
     const onBlur = () => {
       liquid.setPointer(0, 0, false);
-      setPlusVisible(false);
+      setCircleVisible(false);
     };
 
     const onResize = () => {
@@ -148,17 +166,14 @@ export function SiteLiquidCursor() {
         style={{ mixBlendMode: "difference" }}
         aria-hidden="true"
       />
-      {/* Instant + crosshair — updated on pointermove, not rAF */}
+      {/* Instant circle tip — no + crosshair */}
       <div
-        ref={plusRef}
-        data-site-liquid-plus
-        className="pointer-events-none fixed top-0 left-0 z-[90] hidden h-4 w-4 opacity-0 lg:block"
+        ref={circleRef}
+        data-site-liquid-circle
+        className="pointer-events-none fixed top-0 left-0 z-[90] hidden size-3 rounded-full bg-white opacity-0 lg:block"
         style={{ mixBlendMode: "difference", willChange: "transform" }}
         aria-hidden="true"
-      >
-        <span className="absolute top-1/2 left-0 h-[2px] w-full -translate-y-1/2 bg-white" />
-        <span className="absolute top-0 left-1/2 h-full w-[2px] -translate-x-1/2 bg-white" />
-      </div>
+      />
     </>,
     document.body,
   );

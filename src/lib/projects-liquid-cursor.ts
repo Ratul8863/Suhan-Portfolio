@@ -1,9 +1,9 @@
 /**
  * Kala-style site-wide liquid cursor.
  *
- * - Instant white "+" at the pointer
+ * - Instant white circle at the pointer (no + crosshair)
  * - Soft circle-chain that eases behind the pointer (gooey stroke when moving)
- * - When idle, the chain collapses into a single circle that stays behind the +
+ * - When idle, the chain collapses into a single circle behind the tip
  */
 
 type Vec = { x: number; y: number };
@@ -20,12 +20,12 @@ type Droplet = {
 
 /** Follower nodes from head (near cursor) → tail */
 const NODE_COUNT = 7;
-/** Head catch-up — high enough to feel responsive, still slightly behind the + */
+/** Head catch-up — high enough to feel responsive, still slightly behind the tip */
 const HEAD_LAMBDA = 30;
 /** Each subsequent node follows the previous (higher = shorter trail) */
 const TAIL_LAMBDA = 24;
 const SPEED_SMOOTH_LAMBDA = 14;
-/** Resting blob radius that sits just behind the + when idle */
+/** Resting blob radius that sits just behind the tip circle when idle */
 const IDLE_RADIUS = 12;
 const HEAD_RADIUS = 15;
 const TAIL_RADIUS = 2.2;
