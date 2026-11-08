@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import gsap from "gsap";
 import { useReducedMotion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
@@ -15,9 +16,42 @@ import {
   MOBILE_MENU_CLOSE_BG,
   MOBILE_MENU_CLOSE_FG,
 } from "@/components/layout/mobile-curved-menu";
+import { scrollToY } from "@/providers/smooth-scroll-provider";
 import { cn } from "@/lib/utils";
 
 type SidebarVariant = "light" | "dark";
+
+/** Home logo: other pages → `/`; already on home → scroll to top. */
+function BrandHomeLink({
+  className,
+  onNavigate,
+  children,
+}: {
+  className?: string;
+  onNavigate?: () => void;
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <Link
+      href="/"
+      className={className}
+      aria-label={`${siteConfig.shortName} home`}
+      onClick={(event) => {
+        onNavigate?.();
+        if (pathname !== "/") return;
+        event.preventDefault();
+        scrollToY(0);
+        if (window.location.hash) {
+          window.history.replaceState(null, "", "/");
+        }
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
 
 function NavContent({
   onNavigate,
@@ -124,11 +158,9 @@ function NavContent({
         isDark ? "gap-[30px]" : "gap-6",
       )}
     >
-      <Link
-        href="/"
+      <BrandHomeLink
         className="inline-flex shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-        onClick={onNavigate}
-        aria-label={`${siteConfig.shortName} home`}
+        onNavigate={onNavigate}
       >
         {isDark ? (
           <Image
@@ -149,7 +181,7 @@ function NavContent({
             priority
           />
         )}
-      </Link>
+      </BrandHomeLink>
 
       <nav aria-label="Primary" className="flex min-h-0 flex-1 flex-col">
         <ul className="flex flex-1 flex-col gap-3">
@@ -453,7 +485,11 @@ export function SidebarNav({
               : "bg-white/95 backdrop-blur",
         )}
       >
-        <Link href="/" aria-label={`${siteConfig.shortName} home`}>
+        <BrandHomeLink
+          onNavigate={() => {
+            if (open) setOpen(false);
+          }}
+        >
           {isDark ? (
             <Image
               src={open ? "/assets/logo-r-cream.svg" : "/assets/logo-r-ink.svg"}
@@ -471,7 +507,7 @@ export function SidebarNav({
               height={32}
             />
           )}
-        </Link>
+        </BrandHomeLink>
 
         <MenuToggleButton
           open={open}

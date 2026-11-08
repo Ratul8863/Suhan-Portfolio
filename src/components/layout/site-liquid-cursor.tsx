@@ -3,8 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProjectsLiquidCursor } from "@/lib/projects-liquid-cursor";
+import {
+  SpinCursorArrow,
+  type SpinCursorArrowHandle,
+} from "@/components/layout/spin-cursor-arrow";
 
-function canUseLiquidCursor() {
+function canUseCustomCursor() {
   if (typeof window === "undefined") return false;
   return (
     window.matchMedia("(min-width: 1024px)").matches &&
@@ -13,7 +17,7 @@ function canUseLiquidCursor() {
   );
 }
 
-/** Hide liquid + circle over CTAs / native buttons / existing hide zones. */
+/** Liquid trail off over CTAs / buttons / exclusive cursors. */
 function shouldHideLiquid(under: Element | null) {
   if (!(under instanceof Element)) return false;
   return Boolean(
@@ -32,12 +36,27 @@ function shouldHideLiquid(under: Element | null) {
 }
 
 /**
- * Site-wide Kala liquid cursor + instant circle (no + crosshair).
- * Disabled over buttons / CTAs and existing hide markers.
+ * Arrow stays except where another custom cursor owns the pointer
+ * (Feature Projects VIEW PROJECT / All Projects Website ball).
+ */
+function shouldHideArrow(under: Element | null) {
+  if (!(under instanceof Element)) return false;
+  return Boolean(
+    under.closest(
+      "[data-project-hit], .all-projects__list, .all-projects.is-cursor-active",
+    ),
+  );
+}
+
+/**
+ * Site cursor: Originkit spin arrow + Kala liquid trail.
+ * - Liquid runs with the arrow on open canvas
+ * - On buttons: liquid off, arrow still on
+ * - Exclusive hit zones: both off (native / section cursor)
  */
 export function SiteLiquidCursor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const circleRef = useRef<HTMLDivElement>(null);
+  const arrowRef = useRef<SpinCursorArrowHandle | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -47,73 +66,87 @@ export function SiteLiquidCursor() {
   useEffect(() => {
     if (!ready) return;
     const canvas = canvasRef.current;
-    const circle = circleRef.current;
-    if (!canvas || !circle) return;
+    if (!canvas) return;
 
     const liquid = new ProjectsLiquidCursor(canvas);
     let enabled = false;
     let resizeTimer = 0;
+    let hideStyle: HTMLStyleElement | null = null;
 
+    // Force-hide OS pointer on every element (inputs/buttons set cursor:text/pointer).
     const setNativeHidden = (hide: boolean) => {
-      document.documentElement.style.cursor = hide ? "none" : "";
-      document.body.style.cursor = hide ? "none" : "";
-    };
-
-    const setCircleVisible = (on: boolean) => {
-      circle.style.opacity = on ? "1" : "0";
+      if (hide) {
+        if (!hideStyle) {
+          hideStyle = document.createElement("style");
+          hideStyle.setAttribute("data-suhan-hide-cursor", "");
+          hideStyle.textContent =
+            "html.suhan-spin-cursor, html.suhan-spin-cursor * { cursor: none !important; }";
+          document.head.appendChild(hideStyle);
+        }
+        document.documentElement.classList.add("suhan-spin-cursor");
+      } else {
+        document.documentElement.classList.remove("suhan-spin-cursor");
+        hideStyle?.remove();
+        hideStyle = null;
+      }
     };
 
     const syncEnabled = () => {
-      enabled = canUseLiquidCursor();
+      enabled = canUseCustomCursor();
       if (enabled) {
         liquid.resize();
         liquid.start();
         setNativeHidden(true);
         canvas.classList.remove("hidden");
-        circle.classList.remove("hidden");
       } else {
         liquid.setPointer(0, 0, false);
         liquid.stop();
         setNativeHidden(false);
-        setCircleVisible(false);
+        arrowRef.current?.setVisible(false);
         canvas.classList.add("hidden");
-        circle.classList.add("hidden");
       }
     };
 
     const onPointerMove = (event: PointerEvent) => {
       if (!enabled) return;
       const under = document.elementFromPoint(event.clientX, event.clientY);
-      const overHit = shouldHideLiquid(under);
+      const hideLiquid = shouldHideLiquid(under);
+      const hideArrow = shouldHideArrow(under);
 
-      // Instant circle — no rAF lag
-      circle.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0) translate(-50%, -50%)`;
-      setCircleVisible(!overHit);
-      // Buttons keep the normal pointer; elsewhere hide the OS cursor.
-      setNativeHidden(!overHit);
+      arrowRef.current?.setPointer(event.clientX, event.clientY, true);
+      arrowRef.current?.setVisible(!hideArrow);
+      // OS pointer stays hidden everywhere while spin cursor mode is on
+      // (exclusive zones still use cursor:none for their own ball).
 
-      liquid.setOverHit(overHit);
+      liquid.setOverHit(hideLiquid || hideArrow);
       liquid.setPointer(event.clientX, event.clientY, true);
     };
 
     const onPointerLeave = () => {
       liquid.setPointer(0, 0, false);
-      setCircleVisible(false);
+      arrowRef.current?.setPointer(0, 0, false);
+      arrowRef.current?.setVisible(false);
     };
 
     const onPointerEnter = (event: MouseEvent) => {
       if (!enabled) return;
-      circle.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0) translate(-50%, -50%)`;
       const under = document.elementFromPoint(event.clientX, event.clientY);
-      const overHit = shouldHideLiquid(under);
-      setCircleVisible(!overHit);
-      liquid.setOverHit(overHit);
+      const hideLiquid = shouldHideLiquid(under);
+      const hideArrow = shouldHideArrow(under);
+      arrowRef.current?.setPointer(event.clientX, event.clientY, true);
+      arrowRef.current?.setVisible(!hideArrow);
+      liquid.setOverHit(hideLiquid || hideArrow);
       liquid.setPointer(event.clientX, event.clientY, true);
     };
 
+    const onDown = () => arrowRef.current?.setPressed(true);
+    const onUp = () => arrowRef.current?.setPressed(false);
+
     const onBlur = () => {
       liquid.setPointer(0, 0, false);
-      setCircleVisible(false);
+      arrowRef.current?.setPointer(0, 0, false);
+      arrowRef.current?.setVisible(false);
+      arrowRef.current?.setPressed(false);
     };
 
     const onResize = () => {
@@ -129,6 +162,8 @@ export function SiteLiquidCursor() {
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     document.documentElement.addEventListener("mouseleave", onPointerLeave);
     document.documentElement.addEventListener("mouseenter", onPointerEnter);
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointerup", onUp, { passive: true });
     window.addEventListener("blur", onBlur);
     window.addEventListener("resize", onResize);
 
@@ -145,6 +180,8 @@ export function SiteLiquidCursor() {
       window.removeEventListener("pointermove", onPointerMove);
       document.documentElement.removeEventListener("mouseleave", onPointerLeave);
       document.documentElement.removeEventListener("mouseenter", onPointerEnter);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("resize", onResize);
       reduceMq.removeEventListener("change", onMq);
@@ -162,17 +199,15 @@ export function SiteLiquidCursor() {
       <canvas
         ref={canvasRef}
         data-site-liquid-cursor
-        className="pointer-events-none fixed inset-0 z-[89] hidden lg:block"
+        className="pointer-events-none fixed inset-0 z-89 hidden lg:block"
         style={{ mixBlendMode: "difference" }}
         aria-hidden="true"
       />
-      {/* Instant circle tip — no + crosshair */}
-      <div
-        ref={circleRef}
-        data-site-liquid-circle
-        className="pointer-events-none fixed top-0 left-0 z-[90] hidden size-3 rounded-full bg-white opacity-0 lg:block"
-        style={{ mixBlendMode: "difference", willChange: "transform" }}
-        aria-hidden="true"
+      <SpinCursorArrow
+        arrowRef={arrowRef}
+        fillColor="#f9f4eb"
+        cursorSize={34}
+        enableStretch
       />
     </>,
     document.body,

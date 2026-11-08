@@ -254,16 +254,21 @@ export function AllProjects() {
           )
         : null}
 
+      {/* Figma 700:29 — header left 10 / top 20, title 36/40, line gap 10 */}
       <div className="flex items-center gap-2.5 px-2.5 lg:px-0">
-        <h2 className="shrink-0 font-ui text-[36px] font-black uppercase leading-10 text-cream sm:text-[2.5rem] lg:text-[64px] lg:leading-[72px]">
+        <h2 className="shrink-0 font-ui text-[36px] font-black uppercase leading-10 text-cream lg:text-[64px] lg:leading-[72px]">
           All Projects
         </h2>
-        <div className="h-px min-w-0 flex-1 bg-cream" />
+        <div className="h-px min-w-0 flex-1 bg-cream" aria-hidden />
       </div>
 
+      {/*
+        Mobile (700:29): list gap 20 around each divider → ~40px between rows.
+        Row: px 10, left stack gap 16 (title 20/24 + meta 16/24), right col 41×72.
+      */}
       <ul
         ref={listRef}
-        className="all-projects__list mt-5 flex flex-col gap-5 lg:mt-10 lg:gap-0 lg:border-t lg:border-cream/80"
+        className="all-projects__list mt-5 flex flex-col lg:mt-10 lg:border-t lg:border-cream/80"
       >
         {portfolioAllProjects.map((project) => {
           const href = project.liveUrl ?? `/projects/${project.slug}`;
@@ -279,9 +284,9 @@ export function AllProjects() {
                 {...(external
                   ? { target: "_blank", rel: "noopener noreferrer" }
                   : {})}
-                className="all-projects__row group flex items-center justify-between gap-4 px-2.5 font-body text-cream capitalize transition-[color,background-color,opacity] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-inset lg:gap-6 lg:px-[60px] lg:py-10 lg:hover:bg-cream lg:hover:text-ink"
+                className="all-projects__row group flex items-center justify-between gap-3 px-2.5 py-5 font-body text-cream capitalize transition-[color,background-color,opacity] duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-inset lg:gap-6 lg:px-[60px] lg:py-10 lg:hover:bg-cream lg:hover:text-ink"
               >
-                <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+                <div className="flex h-[72px] min-w-0 flex-1 flex-col justify-between lg:h-auto lg:flex-row lg:items-center lg:gap-6">
                   <span className="all-projects__title min-w-0 text-[20px] leading-6 tracking-[0.6px] lg:w-[360px] lg:text-[1.75rem] lg:leading-[48px] lg:tracking-[0.48px]">
                     {project.title}
                   </span>
@@ -290,10 +295,10 @@ export function AllProjects() {
                   </span>
                 </div>
 
-                <div className="flex h-[72px] shrink-0 flex-col items-end justify-between lg:h-auto lg:flex-row lg:items-center">
+                <div className="flex h-[72px] w-[41px] shrink-0 flex-col items-end justify-between lg:h-auto lg:w-auto lg:flex-row lg:items-center lg:gap-6">
                   <span
                     aria-hidden
-                    className="flex size-10 items-center justify-center rounded-full bg-cream text-ink lg:hidden"
+                    className="flex size-10 items-center justify-center rounded-full bg-cream p-2.5 text-ink lg:hidden"
                   >
                     <img
                       src="/assets/all-projects-link-icon.svg"

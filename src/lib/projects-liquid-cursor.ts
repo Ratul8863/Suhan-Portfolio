@@ -1,9 +1,9 @@
 /**
  * Kala-style site-wide liquid cursor.
  *
- * - Instant white circle at the pointer (no + crosshair)
- * - Soft circle-chain that eases behind the pointer (gooey stroke when moving)
- * - When idle, the chain collapses into a single circle behind the tip
+ * - Spin-arrow tip leads at the pointer
+ * - Soft circle-chain eases BEHIND the tip (gooey stroke when moving)
+ * - Idle blob collapses behind the tip — never sits on top of it
  */
 
 type Vec = { x: number; y: number };
@@ -20,18 +20,21 @@ type Droplet = {
 
 /** Follower nodes from head (near cursor) → tail */
 const NODE_COUNT = 7;
-/** Head catch-up — high enough to feel responsive, still slightly behind the tip */
-const HEAD_LAMBDA = 30;
+/** Head catch-up — responsive, but aimed at a point behind the tip */
+const HEAD_LAMBDA = 28;
 /** Each subsequent node follows the previous (higher = shorter trail) */
 const TAIL_LAMBDA = 24;
 const SPEED_SMOOTH_LAMBDA = 14;
-/** Resting blob radius that sits just behind the tip circle when idle */
-const IDLE_RADIUS = 12;
-const HEAD_RADIUS = 15;
+/** Resting blob radius — sits behind the spin-arrow tip when idle */
+const IDLE_RADIUS = 10;
+const HEAD_RADIUS = 12;
 const TAIL_RADIUS = 2.2;
 const MAX_SPEED = 2600;
 /** Cap spacing between nodes so fast flicks don't paint a long streak */
 const MAX_NODE_GAP = 18;
+/** Keep liquid head clear of the arrow tip (px behind pointer) */
+const TIP_CLEARANCE_IDLE = 18;
+const TIP_CLEARANCE_MOVE = 12;
 
 function clamp(v: number, a: number, b: number) {
   return Math.min(b, Math.max(a, v));
@@ -75,6 +78,11 @@ export class ProjectsLiquidCursor {
   private height = 0;
   private lastFrame = 0;
   private idleBlend = 1;
+  /** Unit vector pointing behind the tip (opposite travel). */
+  private behindX = 0.65;
+  private behindY = 0.75;
+  private lastRawX = 0;
+  private lastRawY = 0;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext("2d", {
@@ -127,15 +135,29 @@ export class ProjectsLiquidCursor {
     }
     const wasVisible = this.visible;
     this.visible = true;
+    if (wasVisible) {
+      const dx = x - this.lastRawX;
+      const dy = y - this.lastRawY;
+      const len = Math.hypot(dx, dy);
+      // Update "behind" from travel direction so the blob trails the tip
+      if (len > 1.2) {
+        this.behindX = -dx / len;
+        this.behindY = -dy / len;
+      }
+    }
+    this.lastRawX = x;
+    this.lastRawY = y;
     this.rawX = x;
     this.rawY = y;
     if (!wasVisible) {
+      const bx = x + this.behindX * TIP_CLEARANCE_IDLE;
+      const by = y + this.behindY * TIP_CLEARANCE_IDLE;
       for (const n of this.nodes) {
-        n.x = x;
-        n.y = y;
+        n.x = bx;
+        n.y = by;
       }
-      this.lastHeadX = x;
-      this.lastHeadY = y;
+      this.lastHeadX = bx;
+      this.lastHeadY = by;
       this.idleBlend = 1;
       this.speed = 0;
     }
@@ -160,10 +182,17 @@ export class ProjectsLiquidCursor {
     this.lastFrame = now;
 
     if (this.visible) {
-      // Head eases toward pointer — snappy enough to not feel laggy
+      // Head eases toward a point BEHIND the tip — arrow leads, liquid follows
+      const clearance = lerp(
+        TIP_CLEARANCE_IDLE,
+        TIP_CLEARANCE_MOVE,
+        1 - this.idleBlend,
+      );
+      const targetX = this.rawX + this.behindX * clearance;
+      const targetY = this.rawY + this.behindY * clearance;
       const head = this.nodes[0];
-      head.x = expDamp(head.x, this.rawX, HEAD_LAMBDA, dt);
-      head.y = expDamp(head.y, this.rawY, HEAD_LAMBDA, dt);
+      head.x = expDamp(head.x, targetX, HEAD_LAMBDA, dt);
+      head.y = expDamp(head.y, targetY, HEAD_LAMBDA, dt);
 
       for (let i = 1; i < NODE_COUNT; i++) {
         const prev = this.nodes[i - 1];
