@@ -1,0 +1,7 @@
+.cursor
+*.mp4
+*.jpg
+!public/**
+agent-transcripts
+CLAUDE.md
+AGENTS.md

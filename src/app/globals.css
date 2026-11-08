@@ -2,25 +2,374 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1e1e1e;
 }
 
 @theme inline {
+  --color-navy: #002045;
+  --color-navy-dark: #010c17;
+  --color-navy-btn: #002b5d;
+  --color-slate: #495d74;
+  --color-mist: #bcccde;
+  --color-text: #1e1e1e;
+  --color-text-muted: #525252;
+  --color-text-dim: #626262;
+  --color-gray: #d9d9d9;
+  --color-cream: #f9f4eb;
+  --color-ink: #1a1c1c;
+  --color-white: #ffffff;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-anton);
+  --font-ui: var(--font-outfit);
+  --font-body: var(--font-manrope);
+  --font-sans: var(--font-manrope);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  /* Lenis owns smooth scrolling — native CSS smooth fights the lerp. */
+  html {
+    scroll-behavior: auto;
+    /* Hide the OS/browser track — scroll still works (Lenis + wheel/touch). */
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-manrope), system-ui, sans-serif;
+    scrollbar-width: none;
+  }
+
+  body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, #002045 20%, white);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility font-display {
+  font-family: var(--font-anton), Impact, sans-serif;
 }
+
+@utility font-ui {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+}
+
+@utility font-body {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+html.intro-pending {
+  scroll-behavior: auto !important;
+}
+
+.intro-preloader {
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.intro-preloader__panel {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  will-change: transform;
+}
+
+.intro-preloader__curve-wrap {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  bottom: -2px;
+  height: 20vh;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translate3d(0, 99%, 0) scaleY(0);
+  transform-origin: 50% 0%;
+  will-change: transform;
+}
+
+.intro-preloader__curve {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 150%;
+  height: 745%;
+  background: #000;
+  border-radius: 50%;
+  transform: translate(-50%, -86.666%);
+}
+
+html.intro-prepare-hero {
+  background: #000;
+}
+
+html.intro-prepare-hero .intro-rise-target,
+html.intro-prepare-hero .intro-rise-sidebar {
+  transform: translate3d(0, var(--intro-pull, 18vh), 0);
+  will-change: transform;
+}
+
+@media (min-width: 1024px) {
+  .selected-projects [data-project-hit] {
+    cursor: none;
+  }
+
+  /*
+   * All Projects — dennissnellenberg.com/archive:
+   * opacity 0.33; title ← ; meta → ; easing (.7,0,.3,1).
+   */
+  .all-projects.is-cursor-active .all-projects__row {
+    background-color: transparent !important;
+    transition: opacity 0.3s cubic-bezier(0.7, 0, 0.3, 1);
+  }
+
+  .all-projects.is-cursor-active .all-projects__title,
+  .all-projects.is-cursor-active .all-projects__meta {
+    display: inline-block;
+    max-width: 100%;
+    transition:
+      transform 0.3s cubic-bezier(0.7, 0, 0.3, 1),
+      font-size 0.3s cubic-bezier(0.7, 0, 0.3, 1);
+    transform: translateX(0) scale(1) rotate(0.001deg);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
+  .all-projects.is-cursor-active .all-projects__meta {
+    transform-origin: left center;
+  }
+
+  .all-projects.is-cursor-active .all-projects__row:hover {
+    background-color: transparent !important;
+    color: #f9f4eb !important;
+    opacity: 0.33;
+  }
+
+  .all-projects.is-cursor-active .all-projects__row:hover .all-projects__title {
+    transform: translateX(-0.6vw) scale(1.16) rotate(0.001deg);
+  }
+
+  .all-projects.is-cursor-active .all-projects__row:hover .all-projects__meta {
+    color: #f9f4eb !important;
+    transform: translateX(0.6vw) scale(1.08) rotate(0.001deg);
+  }
+}
+
+/* Mobile / no custom cursor: cream invert still tints meta. */
+.all-projects:not(.is-cursor-active) .all-projects__row:hover .all-projects__meta {
+  color: #1a1c1c;
+}
+
+/*
+ * Sidebar fill hover — one smooth liquid bloom.
+ * Rises from bottom, retreats upward. No extra layers.
+ */
+.sidebar-fill-btn {
+  --sidebar-fill-ms: 1.15s;
+  --sidebar-fill-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-fill-size: 560px;
+  isolation: isolate;
+}
+
+.sidebar-fill-btn::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  width: var(--sidebar-fill-size);
+  height: var(--sidebar-fill-size);
+  border-radius: 45% 55% 52% 48%;
+  transform: translate(-50%, -50%) scale(0);
+  transform-origin: 50% 12%;
+  transition:
+    transform var(--sidebar-fill-ms) var(--sidebar-fill-ease),
+    border-radius var(--sidebar-fill-ms) var(--sidebar-fill-ease);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.sidebar-fill-btn:hover::before,
+.sidebar-fill-btn:focus-visible::before {
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  transform-origin: 50% 88%;
+}
+
+.sidebar-fill-btn__num,
+.sidebar-fill-btn__label,
+.sidebar-fill-btn__icon {
+  transition: transform var(--sidebar-fill-ms) var(--sidebar-fill-ease);
+}
+
+.sidebar-fill-btn:hover .sidebar-fill-btn__num,
+.sidebar-fill-btn:focus-visible .sidebar-fill-btn__num {
+  transform: scale(1.12);
+}
+
+.sidebar-fill-btn:hover .sidebar-fill-btn__label,
+.sidebar-fill-btn:focus-visible .sidebar-fill-btn__label {
+  transform: scale(1.08);
+}
+
+.sidebar-fill-btn:hover .sidebar-fill-btn__icon,
+.sidebar-fill-btn:focus-visible .sidebar-fill-btn__icon {
+  transform: translate(6px, -6px) scale(1.1) rotate(8deg);
+}
+
+.sidebar-fill-btn--dark {
+  color: #f9f4eb;
+  transition: color var(--sidebar-fill-ms) var(--sidebar-fill-ease);
+}
+
+.sidebar-fill-btn--dark::before {
+  background: #f9f4eb;
+}
+
+.sidebar-fill-btn--dark:hover,
+.sidebar-fill-btn--dark:focus-visible {
+  color: #1a1c1c;
+}
+
+.sidebar-fill-btn--light {
+  color: #1e1e1e;
+  transition: color var(--sidebar-fill-ms) var(--sidebar-fill-ease);
+}
+
+.sidebar-fill-btn--light::before {
+  background: #002045;
+}
+
+.sidebar-fill-btn--light:hover,
+.sidebar-fill-btn--light:focus-visible {
+  color: #ffffff;
+}
+
+.sidebar-fill-btn--book-dark {
+  --sidebar-fill-size: 520px;
+  color: #1a1c1c;
+  transition: color var(--sidebar-fill-ms) var(--sidebar-fill-ease);
+}
+
+.sidebar-fill-btn--book-dark::before {
+  background: #000000;
+}
+
+.sidebar-fill-btn--book-dark:hover,
+.sidebar-fill-btn--book-dark:focus-visible {
+  color: #f9f4eb;
+}
+
+.sidebar-fill-btn--book-light {
+  --sidebar-fill-size: 520px;
+  color: #ffffff;
+  transition: color var(--sidebar-fill-ms) var(--sidebar-fill-ease);
+}
+
+.sidebar-fill-btn--book-light::before {
+  background: #010c17;
+}
+
+.sidebar-fill-btn--book-light:hover,
+.sidebar-fill-btn--book-light:focus-visible {
+  color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-fill-btn::before,
+  .sidebar-fill-btn:hover::before,
+  .sidebar-fill-btn:focus-visible::before,
+  .sidebar-fill-btn__num,
+  .sidebar-fill-btn__label,
+  .sidebar-fill-btn__icon {
+    transition: none;
+  }
+}
+
+.intro-preloader__screen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  background: transparent;
+}
+
+.intro-preloader__words {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  opacity: 0;
+  transform: translate3d(0, 50%, 0);
+  will-change: opacity, transform;
+}
+
+.intro-preloader__words.is-in {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition:
+    opacity 0.22s cubic-bezier(0.87, 0, 0.13, 1),
+    transform 0.22s cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+.intro-preloader__words.is-out {
+  opacity: 0;
+  transform: translate3d(0, -75%, 0);
+  transition:
+    opacity var(--intro-exit-ms, 800ms) cubic-bezier(0.95, 0.05, 0.795, 0.035),
+    transform var(--intro-exit-ms, 800ms) cubic-bezier(0.95, 0.05, 0.795, 0.035);
+}
+
+.intro-preloader__dot {
+  flex-shrink: 0;
+  width: 0.167em;
+  height: 0.167em;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.intro-preloader__word {
+  margin: 0;
+  font-family: var(--font-outfit), var(--font-intro), var(--font-intro-jp), "Segoe UI", sans-serif;
+  font-size: 1em;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-preloader {
+    display: none !important;
+  }
+}
+
